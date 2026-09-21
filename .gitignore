@@ -8,3 +8,5 @@ build/
 *.cas
 *.map
 .pytest_cache/
+docs/superpowers/
+tests/
