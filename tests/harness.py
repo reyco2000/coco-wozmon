@@ -134,3 +134,38 @@ class CoCoSim:
         self.cpu.system_stack_pointer.set(sp - 1)
         self.cpu.test_run(self.sym[label], SENTINEL, max_ops=max_cycles)
         return self.cpu.accu_a.value
+
+    def queue_keys(self, keys):
+        """Play back a list of (col, row) keystrokes to GETKEY.
+
+        SCANKEY short-circuits as soon as it finds a pressed key, so it may
+        never strobe the last column -- a sweep-completion trigger would not
+        fire reliably. Instead the state machine advances on the write of
+        $FE to PIA0DB, which is how every SCANKEY call begins.
+
+        GETKEY needs each key to appear on one scan and be gone on the next
+        (it waits for release to debounce), so scans alternate deliver/release.
+        """
+        self._queue = list(keys)
+        self._delivering = False
+
+        def on_strobe(cycles, last_op, address, value):
+            if value == 0xFE:                  # a new SCANKEY sweep begins
+                if self._delivering:
+                    self._delivering = False
+                    if self._queue:
+                        self._queue.pop(0)     # key consumed; release it
+                elif self._queue:
+                    self._delivering = True
+            self._strobe = value
+
+        def on_rows(cycles, last_op, address):
+            if not self._delivering or not self._queue:
+                return 0xFF
+            key_col, key_row = self._queue[0]
+            col = next((c for c in range(8) if not (self._strobe >> c) & 1), None)
+            rows = (1 << key_row) if col == key_col else 0
+            return (~rows) & 0xFF
+
+        self.mem.add_write_byte_callback(on_strobe, PIA0DB)
+        self.mem.add_read_byte_callback(on_rows, PIA0DA)

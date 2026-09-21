@@ -193,4 +193,32 @@ PHSHIFT     lsla
 PHDONE      cmpb  <YSAV               ; Z set if no digits consumed
             rts
 
+; --- GETLINE: read a line into IN, echoing. Returns B = 0. ---
+GETLINE     lda   #CR
+            jsr   PUTCHAR
+GLINIT      ldu   #IN
+            clrb
+GLNEXT      jsr   GETKEY
+            cmpa  #BS
+            beq   GLBACK
+            cmpa  #ESC
+            beq   GLESC
+            sta   b,u                 ; store into IN
+            jsr   PUTCHAR
+            cmpa  #CR
+            beq   GLDONE
+            incb
+            bpl   GLNEXT              ; auto-escape past 127 characters
+GLESC       lda   #'\'
+            jsr   PUTCHAR
+            bra   GETLINE
+GLBACK      tstb
+            beq   GETLINE             ; backed past the start: restart
+            decb
+            lda   #'_'                ; the Apple I's backspace key was '_',
+            jsr   PUTCHAR             ; and it echoed one; match that display
+            bra   GLNEXT
+GLDONE      clrb
+            rts
+
             end ENTRY
