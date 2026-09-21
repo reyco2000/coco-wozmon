@@ -135,18 +135,36 @@ The core keeps the original's structure: four states (`NOTCR`, `GETLINE`,
 `NEXTITEM`, `NEXTHEX`) dispatched through the `MODE` byte, whose values
 are unchanged at `$00` XAM, `$74` STOR, `$AE` BLOCK.
 
+**`MODE` resets to `$00` at the start of every line.** The original does
+this after each CR by falling through `LDA #$00` / `TAX` / `ASL` into
+`SETMODE`. Omitting it leaves a store line's `$74` in place, so the next
+line's address item takes the store path instead of printing and silently
+writes to the store index. Only an end-to-end test catches this: any test
+that sets `MODE` itself before dispatching hides it.
+
 ### 5.1 Translations that collapse
 
 | Wozmon (6502) | CoCo (6809) |
 |---|---|
 | `LDA IN,Y`, 8-bit `Y` index | `LDA B,U` with `U` = `IN` base — B-accumulator-offset indexing is an exact match |
 | `SETADR` 2-byte copy loop | `LDX <HEX` / `STX <ST` / `STX <XAM` |
-| `LDA XAML`/`CMP L`/`LDA XAMH`/`SBC H`/`BCS` | `LDD <XAM` / `CMPD <HEX` / `BHS` |
+| `LDA XAML`/`CMP L`/`LDA XAMH`/`SBC H`/`BCS` | `LDX <XAM` / `CMPX <HEX` / `BHS` (**not** `LDD`/`CMPD` -- see below) |
 | `JMP (XAML)` | `JMP [XAM]` — extended indirect |
 | `(XAML,X)` with `X`=0 | `LDX <XAM` / `LDA ,X` |
 
 `TSTB` / `BMI` / `BPL` on `B` preserve the sign tests that drive backspace
 (`BMI GETLINE` past start of line) and the 127-character auto-ESC.
+
+**Register conflict: the 16-bit compare must not use D.** `D` is `A:B`, and
+`B` holds the text index, so `LDD <XAM` silently overwrites the parser's
+position with `XAM`'s low byte. The 6502 original had no such conflict --
+its compare used `A` alone and the index lived in `Y`, a separate register.
+Collapsing the compare to 16 bits reintroduces it. `X` is free at that
+point, so the port uses `CMPX`. The same caution applies anywhere `B` is
+live: `SCROLL` uses `LDD` for its block move and therefore saves `B`.
+Caught in testing -- the symptom was the text index jumping to `$34`, the
+low byte of the examined address, and the dispatcher then walking off the
+end of the line buffer.
 
 ### 5.2 Translations that change
 

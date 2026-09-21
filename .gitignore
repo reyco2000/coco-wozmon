@@ -1,5 +1,10 @@
 .venv/
+__pycache__/
+*.pyc
+build/
 *.bin
 *.rom
 *.lst
 *.cas
+*.map
+.pytest_cache/
