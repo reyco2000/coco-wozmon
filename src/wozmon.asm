@@ -47,7 +47,9 @@ ENTRY       orcc  #$50              ; mask IRQ and FIRQ, both builds
 MAINLOOP    jsr   GETLINE
             ldu   #IN
             clrb
-            jsr   NEXTITEM
+            clr   <MODE             ; every line starts in XAM mode, as the
+            jsr   NEXTITEM          ; original does via LDA #0 / TAX / ASL /
+                                    ; STA MODE after each CR
             bra   MAINLOOP
 
 ; --- INITHW: PIA direction registers and 32x16 text mode. ---
@@ -331,5 +333,9 @@ DOSTORE     lda   <HEX+1
             sta   ,x+
             stx   <ST
             jmp   NEXTITEM
+
+            ifne TARGET
+            zmb   $E000-*           ; pad the cart image to exactly 8K
+            endc
 
             end ENTRY

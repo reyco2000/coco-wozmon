@@ -146,29 +146,29 @@ def _examine(text, pattern=None):
 
 
 def test_single_examine_prints_address_and_byte():
-    sim = _examine("0500", {0x0500: 0xA9})
-    assert "0500: A9" in "".join(sim.screen_text())
+    sim = _examine("1000", {0x1000: 0xA9})
+    assert "1000: A9" in "".join(sim.screen_text())
 
 
 def test_block_examine_prints_eight_bytes_per_line():
-    pattern = {0x0500 + i: i for i in range(16)}
-    sim = _examine("0500.050F", pattern)
+    pattern = {0x1000 + i: i for i in range(16)}
+    sim = _examine("1000.100F", pattern)
     text = "".join(sim.screen_text())
-    assert "0500: 00 01 02 03 04 05 06 07" in text
-    assert "0508: 08 09 0A 0B 0C 0D 0E 0F" in text
+    assert "1000: 00 01 02 03 04 05 06 07" in text
+    assert "1008: 08 09 0A 0B 0C 0D 0E 0F" in text
 
 
 def test_dump_line_fits_32_columns():
-    pattern = {0x0500 + i: 0xFF for i in range(8)}
-    sim = _examine("0500.0507", pattern)
+    pattern = {0x1000 + i: 0xFF for i in range(8)}
+    sim = _examine("1000.1007", pattern)
     for row in sim.screen_text():
         assert len(row.rstrip()) <= 32
 
 
 def test_block_examine_across_page_boundary():
     """Exercises the INC XAM carry path the OCR listing got wrong."""
-    pattern = {0x04FE: 0xAA, 0x04FF: 0xBB, 0x0500: 0xCC, 0x0501: 0xDD}
-    sim = _examine("04FE.0501", pattern)
+    pattern = {0x10FE: 0xAA, 0x10FF: 0xBB, 0x1100: 0xCC, 0x1101: 0xDD}
+    sim = _examine("10FE.1101", pattern)
     text = "".join(sim.screen_text())
     assert "AA BB" in text
     assert "CC DD" in text
@@ -182,23 +182,23 @@ def test_examine_sets_xam_to_parsed_address():
 # --- Task 9: store mode ------------------------------------------------
 
 def test_store_writes_byte_at_address():
-    sim = _examine("0500: AA")
-    assert sim.peek(0x0500) == 0xAA
+    sim = _examine("1000: AA")
+    assert sim.peek(0x1000) == 0xAA
 
 
 def test_store_multiple_bytes_advances():
-    sim = _examine("0500: 11 22 33")
-    assert [sim.peek(0x0500 + i) for i in range(3)] == [0x11, 0x22, 0x33]
+    sim = _examine("1000: 11 22 33")
+    assert [sim.peek(0x1000 + i) for i in range(3)] == [0x11, 0x22, 0x33]
 
 
 def test_store_across_page_boundary():
-    sim = _examine("04FE: 11 22 33 44")
-    assert [sim.peek(0x04FE + i) for i in range(4)] == [0x11, 0x22, 0x33, 0x44]
+    sim = _examine("10FE: 11 22 33 44")
+    assert [sim.peek(0x10FE + i) for i in range(4)] == [0x11, 0x22, 0x33, 0x44]
 
 
 def test_store_uses_low_byte_only():
-    sim = _examine("0500: 1234")
-    assert sim.peek(0x0500) == 0x34
+    sim = _examine("1000: 1234")
+    assert sim.peek(0x1000) == 0x34
 
 
 def test_bare_colon_continues_from_last_store_index():
@@ -212,9 +212,9 @@ def test_bare_colon_continues_from_last_store_index():
         sim.poke(sim.sym["MODE"], 0x00)
         sim.run_sub("NEXTITEM", b=0, u=base)
 
-    feed("0500: 11 22")
+    feed("1000: 11 22")
     feed(": 33 44")
-    assert [sim.peek(0x0500 + i) for i in range(4)] == [0x11, 0x22, 0x33, 0x44]
+    assert [sim.peek(0x1000 + i) for i in range(4)] == [0x11, 0x22, 0x33, 0x44]
 
 
 # --- Task 10: RUN and the main loop ------------------------------------
@@ -222,9 +222,9 @@ def test_bare_colon_continues_from_last_store_index():
 def test_run_jumps_to_examine_address():
     """R transfers control to XAM. Plant an RTS there and check we return."""
     sim = CoCoSim()
-    sim.poke(0x0500, 0x39)            # RTS opcode
+    sim.poke(0x1000, 0x39)            # RTS opcode
     base = sim.sym["IN"]
-    for i, ch in enumerate("0500R\r"):
+    for i, ch in enumerate("1000R\r"):
         sim.poke(base + i, ord(ch))
     sim.poke(sim.sym["MODE"], 0x00)
     sim.run_sub("NEXTITEM", b=0, u=base)
@@ -237,3 +237,41 @@ def test_entry_initializes_dp_and_clears_screen():
     sim.run_entry_briefly(ops=5000)
     assert sim.cpu.direct_page.value == 0x3F
     assert "X" not in "".join(sim.screen_text())
+
+
+# --- End-to-end: drive ENTRY the way a user would ----------------------
+
+def test_full_session_store_then_examine():
+    """Type a store line and an examine line into the real main loop.
+
+    Everything else calls subroutines directly; this is the only test that
+    exercises ENTRY -> GETLINE -> NEXTITEM -> store/examine as one system.
+    """
+    sim = CoCoSim()
+    type_line(sim, "1000: AA\r0500\r")
+    sim.run_entry_briefly(ops=200_000)
+    assert sim.peek(0x1000) == 0xAA, "store did not reach memory"
+    assert "1000: AA" in "".join(sim.screen_text()), "examine did not print"
+
+
+def test_full_session_block_dump():
+    sim = CoCoSim()
+    for i in range(8):
+        sim.poke(0x1010 + i, 0xE0 + i)
+    type_line(sim, "1010.1017\r")
+    sim.run_entry_briefly(ops=200_000)
+    assert "1010: E0 E1 E2 E3 E4 E5 E6 E7" in "".join(sim.screen_text())
+
+
+def test_mode_resets_between_lines():
+    """A store line must not leave the next line stuck in store mode.
+
+    The original resets MODE after every CR (LDA #0 / TAX / ASL / STA MODE).
+    Without that, the address item on the following line takes the store
+    path instead of printing, and silently writes to the store index.
+    """
+    sim = CoCoSim()
+    type_line(sim, "1000: DE AD\r1000.1001\r")
+    sim.run_entry_briefly(ops=400_000)
+    text = "".join(sim.screen_text())
+    assert "1000: DE AD" in text, f"examine after store did not print: {text!r}"

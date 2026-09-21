@@ -135,6 +135,13 @@ The core keeps the original's structure: four states (`NOTCR`, `GETLINE`,
 `NEXTITEM`, `NEXTHEX`) dispatched through the `MODE` byte, whose values
 are unchanged at `$00` XAM, `$74` STOR, `$AE` BLOCK.
 
+**`MODE` resets to `$00` at the start of every line.** The original does
+this after each CR by falling through `LDA #$00` / `TAX` / `ASL` into
+`SETMODE`. Omitting it leaves a store line's `$74` in place, so the next
+line's address item takes the store path instead of printing and silently
+writes to the store index. Only an end-to-end test catches this: any test
+that sets `MODE` itself before dispatching hides it.
+
 ### 5.1 Translations that collapse
 
 | Wozmon (6502) | CoCo (6809) |
