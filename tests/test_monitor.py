@@ -215,3 +215,25 @@ def test_bare_colon_continues_from_last_store_index():
     feed("0500: 11 22")
     feed(": 33 44")
     assert [sim.peek(0x0500 + i) for i in range(4)] == [0x11, 0x22, 0x33, 0x44]
+
+
+# --- Task 10: RUN and the main loop ------------------------------------
+
+def test_run_jumps_to_examine_address():
+    """R transfers control to XAM. Plant an RTS there and check we return."""
+    sim = CoCoSim()
+    sim.poke(0x0500, 0x39)            # RTS opcode
+    base = sim.sym["IN"]
+    for i, ch in enumerate("0500R\r"):
+        sim.poke(base + i, ord(ch))
+    sim.poke(sim.sym["MODE"], 0x00)
+    sim.run_sub("NEXTITEM", b=0, u=base)
+    # Reaching the sentinel without a crash means the JMP [XAM] worked.
+
+
+def test_entry_initializes_dp_and_clears_screen():
+    sim = CoCoSim()
+    sim.poke(0x0400, ord("X"))
+    sim.run_entry_briefly(ops=5000)
+    assert sim.cpu.direct_page.value == 0x3F
+    assert "X" not in "".join(sim.screen_text())

@@ -169,3 +169,11 @@ class CoCoSim:
 
         self.mem.add_write_byte_callback(on_strobe, PIA0DB)
         self.mem.add_read_byte_callback(on_rows, PIA0DA)
+
+    def run_entry_briefly(self, ops=5000):
+        """Run ENTRY for a bounded number of operations (it never returns)."""
+        self.cpu.direct_page.set(0)
+        self.cpu.system_stack_pointer.set(0x7EFF)
+        self.cpu.program_counter.set(self.sym["ENTRY"])
+        for _ in range(ops):
+            self.cpu.get_and_call_next_op()

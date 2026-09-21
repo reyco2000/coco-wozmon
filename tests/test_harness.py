@@ -18,10 +18,16 @@ def test_both_targets_assemble():
 
 
 def test_run_sub_returns_at_sentinel():
-    """ENTRY is currently just setup + RTS, so it must return cleanly."""
+    """run_sub must stop at the sentinel when a routine returns.
+
+    Uses CLS rather than ENTRY: once the main loop exists, ENTRY never
+    returns, so it is exercised by run_entry_briefly instead.
+    """
     sim = CoCoSim()
-    sim.run_sub("ENTRY")
+    sim.poke(SCREEN, ord("X"))
+    sim.run_sub("CLS")
     assert sim.cpu.direct_page.value == 0x3F
+    assert sim.screen_text()[0] == " " * 32
 
 
 def test_pia_simulation_reports_pressed_key():

@@ -38,7 +38,31 @@ ENTRY       orcc  #$50              ; mask IRQ and FIRQ, both builds
             ifne TARGET
             lds   #$0800
             endc
-            rts                     ; replaced in Task 10
+            jsr   INITHW
+            jsr   CLS
+            clr   <MODE
+            ldx   #0
+            stx   <XAM
+            stx   <ST
+MAINLOOP    jsr   GETLINE
+            ldu   #IN
+            clrb
+            jsr   NEXTITEM
+            bra   MAINLOOP
+
+; --- INITHW: PIA direction registers and 32x16 text mode. ---
+; Idempotent: BASIC programs these identically, so the same code is
+; correct in both builds.
+INITHW      clr   $FF01             ; select DDRA
+            clr   $FF00             ; keyboard rows are inputs
+            lda   #$34
+            sta   $FF01             ; select data register A
+            clr   $FF03             ; select DDRB
+            lda   #$FF
+            sta   $FF02             ; keyboard columns are outputs
+            lda   #$34
+            sta   $FF03             ; select data register B
+            rts
 
 CR          equ $0D
 VDGSPC      equ $20                 ; VDG code for space
