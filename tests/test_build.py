@@ -36,3 +36,22 @@ def test_bin_postamble_sets_exec_address():
     assert data[-5] == 0xFF
     exec_addr = (data[-2] << 8) | data[-1]
     assert exec_addr == 0x4000
+
+
+def test_cursor_images_build_too():
+    _build()
+    assert (ROOT / "build" / "wozmonc.bin").exists()
+    assert (ROOT / "build" / "wozmonc.rom").exists()
+
+
+def test_cursor_cart_is_also_exactly_8k():
+    _build()
+    assert (ROOT / "build" / "wozmonc.rom").stat().st_size == 8192
+
+
+def test_cursor_build_is_larger_than_plain():
+    """The cursor is the only difference, so it must cost a few bytes."""
+    _build()
+    plain = (ROOT / "build" / "wozmon.bin").stat().st_size
+    cursor = (ROOT / "build" / "wozmonc.bin").stat().st_size
+    assert cursor > plain

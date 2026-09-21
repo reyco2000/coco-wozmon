@@ -2,6 +2,11 @@
 ; HELLO WORLD  --  a first 6809 assembly program for the CoCo Wozmon monitor
 ;==============================================================================
 ;
+; CREDITS
+;   Wozmon, the Apple I monitor this runs under -- Steve Wozniak, 1976
+;   6809 / Color Computer 2 port -- Reinaldo Torres (CoCoByte Club)
+;                                   and Claude (Anthropic)
+;
 ; WHAT THIS DOES
 ;   Prints HELLO WORLD on the screen, then returns to the monitor prompt.
 ;

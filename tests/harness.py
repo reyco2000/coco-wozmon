@@ -10,6 +10,7 @@ from MC6809.core.configs import BaseConfig
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "wozmon.asm"
+SRC_CURSOR = ROOT / "src" / "wozmon-cursor.asm"
 
 SENTINEL = 0x7F00          # RAM the monitor never executes; marks "subroutine returned"
 SCREEN = 0x0400
@@ -52,8 +53,8 @@ class CoCoSim:
     The cart build is covered by Task 11's build tests plus hardware checks.
     """
 
-    def __init__(self, target=0):
-        blob, self.sym = assemble(target)
+    def __init__(self, target=0, source=SRC):
+        blob, self.sym = assemble(target, source)
         cfg = _Cfg({"verbosity": None, "trace": None})
         self.mem = Memory(cfg)
         self.cpu = CPU(self.mem, cfg)

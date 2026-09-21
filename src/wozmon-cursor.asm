@@ -1,5 +1,5 @@
 ;==============================================================================
-; WOZMON for the TRS-80 Color Computer 2
+; WOZMON for the TRS-80 Color Computer 2  --  BLINKING CURSOR VERSION
 ;==============================================================================
 ;------------------------------------------------------------------------------
 ; CREDITS
@@ -28,6 +28,11 @@
 ;
 ; There is deliberately no way to exit, exactly as on the Apple I. Press the
 ; RESET button to leave.
+;
+; THIS VERSION differs from src/wozmon.asm in exactly one routine, GETKEY,
+; which blinks a '@' cursor at the typing position while it waits for a key.
+; Everything else is identical. See the long comment above GETKEY for why
+; the cursor lives there and not in PUTCHAR.
 ;
 ;==============================================================================
 ; A SHORT ASSEMBLY PRIMER, IF YOU NEED ONE
@@ -130,7 +135,8 @@ YSAV        equ WORK+$06    ; 1 byte: saves a buffer position, so we can tell
                             ;   whether any hex digits were actually typed
 MODE        equ WORK+$07    ; 1 byte: examine / store / dump. See NEXTITEM.
 CURSOR      equ WORK+$08    ; 2 bytes: where the next character will be drawn
-KEYLAST     equ WORK+$0A    ; 1 byte: reserved for key debouncing
+CURSAVE     equ WORK+$0A    ; 1 byte: the screen code hidden under the cursor
+BLINK       equ WORK+$0B    ; 2 bytes: free-running counter that times the blink
 IN          equ WORK+$80    ; 128 bytes: the line you are typing
 
 
@@ -197,6 +203,7 @@ ENTRY       orcc  #$50      ; ORCC sets bits in the condition-code register.
             ldx   #0
             stx   <XAM      ; STX stores all 16 bits of X, so this clears
             stx   <ST       ; both bytes of XAM and of ST in one instruction.
+            stx   <BLINK    ; start the cursor blink counter from a known value
 
 ; --- the main loop: read a line, act on it, repeat forever ---
 MAINLOOP    jsr   GETLINE   ; collect keystrokes until Enter
@@ -398,23 +405,70 @@ SKGOT       abx                 ; ABX adds B to X. X was already at the start
 
 
 ;==============================================================================
-; GETKEY -- wait for a keypress and return it in A.
+; GETKEY -- wait for a keypress and return it in A, blinking a cursor.
 ;
-; Two waits, not one. After seeing a key we wait for it to be RELEASED before
-; returning. Without that, a single press held for a few milliseconds would
-; be read thousands of times and fill the line with repeats. This is called
-; debouncing.
+; THIS IS THE ONLY ROUTINE THAT DIFFERS from the plain monitor.
+;
+; A piece of history worth knowing: the original Wozmon contains no cursor
+; code whatsoever. The Apple I did show a blinking '@' at the typing
+; position, but it was produced by the terminal HARDWARE -- the shift
+; register video section -- with no help from the software at all. Wozmon
+; simply handed characters to the display and the terminal did the rest.
+;
+; The CoCo's video chip has no hardware cursor either. Color BASIC's
+; familiar blinking block is software, drawn during BASIC's own keyboard
+; poll. So to reproduce what an Apple I user actually saw, we have to draw
+; one ourselves -- and the natural place is here, in the one routine that
+; spends its time waiting.
+;
+; The method: remember the screen code already sitting at the cursor
+; position, then alternate between that and a '@' on a free-running counter.
+; Whichever happens to be showing when a key arrives, the original is put
+; back before we return, so the cursor never leaves a mark behind.
+;
+; Two waits as before -- one for a key to go down, one for it to come back
+; up (debouncing). Only the first one blinks.
 ;==============================================================================
 
+CURGLYPH    equ '@'&$3F         ; the screen code for '@'. PUTCHAR masks ASCII
+                                ; with $3F and '@' is $40, so this works out
+                                ; to $00 -- the first character in the video
+                                ; chip's 64-character set.
+
 GETKEY      pshs  b,x
+            ldx   <CURSOR       ; whatever is on screen where we are about to
+            lda   ,x            ; type, save it so it can be put back later
+            sta   <CURSAVE
+
 GKWAIT      bsr   SCANKEY
             tsta                ; TSTA sets the flags from A without altering it
-            beq   GKWAIT        ; still zero: nothing pressed, keep looking
+            bne   GKGOT         ; a key is down: stop blinking and take it
 
-            pshs  a             ; save the key -- SCANKEY is about to overwrite A
-GKREL       bsr   SCANKEY
+            ldx   <BLINK        ; no key yet, so tick the blink counter
+            leax  1,x
+            stx   <BLINK
+            lda   <BLINK        ; the HIGH byte, which changes 256 times more
+                                ; slowly than the low one
+            bita  #$04          ; watch a single bit of it. It flips roughly
+                                ; once a second at the CoCo's clock speed;
+                                ; pick a higher bit to blink slower.
+            beq   GKSHOW        ; bit clear: show what was underneath
+            lda   #CURGLYPH     ; bit set:   show the cursor
+            bra   GKDRAW
+GKSHOW      lda   <CURSAVE
+GKDRAW      ldx   <CURSOR
+            sta   ,x            ; write straight to screen memory, NOT through
+                                ; PUTCHAR -- PUTCHAR would advance the cursor,
+                                ; and the cursor must stay where it is.
+            bra   GKWAIT
+
+GKGOT       pshs  a             ; save the key; SCANKEY is about to overwrite A
+            lda   <CURSAVE      ; leave the screen exactly as we found it,
+            ldx   <CURSOR       ; whichever half of the blink we stopped on
+            sta   ,x
+GKREL       bsr   SCANKEY       ; debounce: wait for every key to come up
             tsta
-            bne   GKREL         ; loop while ANY key is still held
+            bne   GKREL
             puls  a             ; recover the key we found
             puls  b,x,pc
 
