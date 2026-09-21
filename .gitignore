@@ -1,0 +1,5 @@
+.venv/
+*.bin
+*.rom
+*.lst
+*.cas
