@@ -221,4 +221,48 @@ GLBACK      tstb
 GLDONE      clrb
             rts
 
+STORMODE    equ $74                 ; ASL of ':'
+BLOKMODE    equ $AE                 ; '.'
+
+; --- NEXTITEM: dispatch on the next item in IN. B = index, U = IN base. ---
+NEXTITEM    lda   b,u
+            cmpa  #CR
+            beq   NIDONE             ; end of line
+            cmpa  #'.'
+            blo   NISKIP             ; below '.' is a delimiter, skip it
+            beq   NIBLOK
+            cmpa  #':'
+            beq   NISTOR
+            cmpa  #'R'
+            beq   NIRUN
+            bra   NIHEX
+NISKIP      incb
+            bra   NEXTITEM
+NIBLOK      lda   #BLOKMODE
+            sta   <MODE
+            incb
+            bra   NEXTITEM
+NISTOR      lda   #STORMODE
+            sta   <MODE
+            incb
+            bra   NEXTITEM
+NIRUN       jmp   [XAM]              ; the 6809 form of JMP (XAML)
+NIHEX       ldx   #0
+            stx   <HEX               ; clear the accumulator before parsing
+            jsr   PARSEHEX
+            beq   NIESC              ; no digits consumed: malformed
+            jmp   STOREOREXAM        ; Task 8 / Task 9
+; The original's ESCAPE prints '\' then falls into GETLINE, which reads a
+; fresh line. Returning to MAINLOOP is exactly equivalent, and avoids
+; consuming a line here and then having MAINLOOP consume another.
+NIESC       lda   #'\'
+            jsr   PUTCHAR
+            rts
+NIDONE      rts
+
+; Stub, replaced in Task 8. It must close the dispatch loop rather than
+; return, or NEXTITEM stops after the first hex item and never reaches the
+; '.' or ':' that sets MODE.
+STOREOREXAM jmp   NEXTITEM
+
             end ENTRY

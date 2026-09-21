@@ -57,3 +57,66 @@ def test_escape_prints_backslash_and_restarts():
     assert "\\" in "".join(sim.screen_text())
     base = sim.sym["IN"]
     assert chr(sim.peek(base)) == "A"
+
+
+# --- Task 7: command dispatch and MODE ---------------------------------
+
+def _dispatch(text, mode_in=0x00):
+    """Load text into IN and run one NEXTITEM pass."""
+    sim = CoCoSim()
+    base = sim.sym["IN"]
+    for i, ch in enumerate(text + "\r"):
+        sim.poke(base + i, ord(ch))
+    sim.poke(sim.sym["MODE"], mode_in)
+    sim.run_sub("NEXTITEM", b=0, u=base)
+    return sim
+
+
+def test_period_sets_block_mode():
+    sim = _dispatch("1000.1010")
+    assert sim.peek(sim.sym["MODE"]) == 0xAE
+
+
+def test_colon_sets_store_mode():
+    sim = _dispatch("1000: AA")
+    assert sim.peek(sim.sym["MODE"]) == 0x74
+
+
+def test_bare_address_leaves_xam_mode():
+    sim = _dispatch("1000")
+    assert sim.peek(sim.sym["MODE"]) == 0x00
+
+
+def test_mode_values_match_original_exactly():
+    """$74 is ASL of ':' ($BA); $AE is '.'. The OCR listing had these wrong."""
+    store = _dispatch("00:")
+    assert store.peek(store.sym["MODE"]) == 0x74
+    blok = _dispatch("00.")
+    assert blok.peek(blok.sym["MODE"]) == 0xAE
+
+
+def test_spaces_are_skipped_as_delimiters():
+    sim = _dispatch("10 20 30")
+    assert sim.peek(sim.sym["MODE"]) == 0x00
+
+
+def test_malformed_input_prints_backslash():
+    """No hex digits where hex is expected is the monitor's only error path.
+
+    It prints '\\' and returns, so MAINLOOP reads a fresh line -- matching
+    the original, whose ESCAPE prints '\\' then falls into GETLINE.
+    """
+    sim = _dispatch("G")
+    assert "\\" in "".join(sim.screen_text())
+
+
+def test_hex_letters_all_parse():
+    """Regression guard for the 6809 carry inversion.
+
+    With the original's ADC #$88 constant instead of ADDA #$89, every one
+    of these is rejected as non-hex and HEX is never populated.
+    """
+    for letter in "ABCDEF":
+        sim = _dispatch(letter * 4)
+        expected = int(letter * 4, 16)
+        assert sim.peek_word(sim.sym["HEX"]) == expected, f"{letter} failed"
