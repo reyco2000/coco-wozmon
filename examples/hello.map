@@ -1,6 +1,0 @@
-Symbol: CR (examples/hello.bin) = 000D
-Symbol: DONE (examples/hello.bin) = 100C
-Symbol: LOOP (examples/hello.bin) = 1003
-Symbol: MSG (examples/hello.bin) = 100D
-Symbol: PUTCHAR (examples/hello.bin) = 403C
-Symbol: START (examples/hello.bin) = 1000
