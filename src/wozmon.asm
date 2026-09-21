@@ -163,4 +163,34 @@ PRHEX       anda  #$0F
             adda  #7                ; skip ':' through '@' to reach 'A'
 PRHOUT      jmp   PUTCHAR           ; tail call; PUTCHAR preserves A
 
+; --- PARSEHEX: accumulate hex digits from IN into HEX. ---
+; In:  B = index into IN, U = IN base.
+; Out: B = index of first non-hex char; Z set if no digits were consumed.
+; 'A' differs from $C1 only in bit 7, so EOR #$30 maps plain ASCII exactly
+; as the original mapped high-bit ASCII. The original's ADC #$88 relies on
+; the 6502 setting carry when A >= M; the 6809 sets carry on BORROW, the
+; opposite, so the +1 is folded into the constant here: ADDA #$89.
+PARSEHEX    stb   <YSAV               ; remember where the digits started
+PHNEXT      lda   b,u                 ; the 6809 form of LDA IN,Y
+            eora  #$30                ; map '0'-'9' to $00-$09
+            cmpa  #$0A
+            blo   PHDIG
+            adda  #$89                ; map 'A'-'F' to $FA-$FF
+            cmpa  #$FA
+            blo   PHDONE              ; not a hex character
+PHDIG       lsla                      ; digit into the high nibble
+            lsla
+            lsla
+            lsla
+            ldy   #4                  ; shift count
+PHSHIFT     lsla
+            rol   <HEX+1              ; low byte first: 6809 is big-endian
+            rol   <HEX
+            leay  -1,y
+            bne   PHSHIFT
+            incb
+            bra   PHNEXT
+PHDONE      cmpb  <YSAV               ; Z set if no digits consumed
+            rts
+
             end ENTRY
