@@ -220,6 +220,20 @@ Working on real hardware. Verified on a CoCo 2:
 - the keyboard matrix
 - examine, dump, store and run
 
-**Not yet verified:** the cartridge autostart signature — what Color BASIC's
-reset routine checks at `$C000` before jumping there. Both `.ROM` images are
-therefore unproven. The `.BIN` builds are known good.
+**The cartridge format is confirmed**, by inspecting a shipping Tandy Program
+Pak (Polaris, 26-3065, 1981). There is no signature and no header: that
+cartridge begins with `10 CE 01 51`, which is simply `LDS #$0151`. Color
+BASIC jumps to `$C000` when a cartridge asserts `CART*`, and the ROM starts
+with code. Our images match that format.
+
+Two details worth knowing, both taken from Polaris rather than assumed:
+
+- **A cartridge must set up its own stack.** BASIC never runs, so none
+  exists. Polaris does it in its *first* instruction; our cart build does the
+  same with `LDS #$0800`.
+- **4K images are valid.** Polaris is 4096 bytes even though the cartridge
+  window is 8K. Our 8K padding fills the window but is not required.
+
+**Still untested:** the `.ROM` images have not themselves been run on
+hardware — only their format has been confirmed correct. The `.BIN` builds
+are known good.

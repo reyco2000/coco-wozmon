@@ -11,3 +11,4 @@ build/
 docs/superpowers/
 tests/
 requirements.txt
+*.ccc
