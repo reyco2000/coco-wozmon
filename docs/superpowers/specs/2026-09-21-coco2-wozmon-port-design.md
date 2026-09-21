@@ -157,7 +157,8 @@ are unchanged at `$00` XAM, `$74` STOR, `$AE` BLOCK.
 | `MOD8CHK` always-taken `BPL` | `BRA` — it does not affect CC, so Z from `ANDA #$07` still reaches `NXTPRNT`'s `BNE` |
 | `CLD` | deleted, no decimal mode on 6809 |
 | `CLI` | **inverts** to `ORCC #$50`, in *both* builds. In the cart build BASIC never initializes, so no IRQ handler is installed and enabling interrupts would crash on the first VSYNC. In the BIN build BASIC's handler does exist, but masking is safe because the monitor never returns and so never has to restore it |
-| High-bit-set ASCII | plain ASCII. The hex-parse constants survive unchanged: `EORA #$30` then `ADCA #$88` / `CMPA #$FA` works identically, because `'A'` differs from `$C1` only in bit 7 |
+| High-bit-set ASCII | plain ASCII. `EORA #$30` and `CMPA #$FA` carry over unchanged, because `'A'` differs from `$C1` only in bit 7 |
+| **Carry convention on compare** | **The 6809 inverts the 6502's.** The 6502's `CMP` sets C=1 when `A >= M`; the 6809's `CMPA` sets C=1 on *borrow*, i.e. when `A < M`. The original's `ADC #$88` relies on the 6502 carry being set by the preceding failed compare, so it becomes `ADDA #$89` here, with the `+1` folded into the constant. Verified on the emulator: with `ADDA #$88`, `'A'` yields `$F9` rather than `$FA` and every hex letter A-F is rejected. Everywhere else the port uses semantic mnemonics (`BLO`, `BHS`, `BLS`) instead of transliterating `BCC`/`BCS`, and those are correct on the 6809 unchanged |
 
 ### 5.3 Output format
 
