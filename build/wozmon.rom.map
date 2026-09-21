@@ -1,0 +1,16 @@
+Symbol: CURSOR (build/wozmon.rom) = 0608
+Symbol: ENTRY (build/wozmon.rom) = C000
+Symbol: HEX (build/wozmon.rom) = 0604
+Symbol: IN (build/wozmon.rom) = 0680
+Symbol: KEYLAST (build/wozmon.rom) = 060A
+Symbol: MODE (build/wozmon.rom) = 0607
+Symbol: ORIGIN (build/wozmon.rom) = C000
+Symbol: PIA0DA (build/wozmon.rom) = FF00
+Symbol: PIA0DB (build/wozmon.rom) = FF02
+Symbol: SCREEN (build/wozmon.rom) = 0400
+Symbol: SCREND (build/wozmon.rom) = 0600
+Symbol: ST (build/wozmon.rom) = 0602
+Symbol: TARGET (build/wozmon.rom) = 0001
+Symbol: WORK (build/wozmon.rom) = 0600
+Symbol: XAM (build/wozmon.rom) = 0600
+Symbol: YSAV (build/wozmon.rom) = 0606

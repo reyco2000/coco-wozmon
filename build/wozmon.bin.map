@@ -1,0 +1,16 @@
+Symbol: CURSOR (build/wozmon.bin) = 3F08
+Symbol: ENTRY (build/wozmon.bin) = 4000
+Symbol: HEX (build/wozmon.bin) = 3F04
+Symbol: IN (build/wozmon.bin) = 3F80
+Symbol: KEYLAST (build/wozmon.bin) = 3F0A
+Symbol: MODE (build/wozmon.bin) = 3F07
+Symbol: ORIGIN (build/wozmon.bin) = 4000
+Symbol: PIA0DA (build/wozmon.bin) = FF00
+Symbol: PIA0DB (build/wozmon.bin) = FF02
+Symbol: SCREEN (build/wozmon.bin) = 0400
+Symbol: SCREND (build/wozmon.bin) = 0600
+Symbol: ST (build/wozmon.bin) = 3F02
+Symbol: TARGET (build/wozmon.bin) = 0000
+Symbol: WORK (build/wozmon.bin) = 3F00
+Symbol: XAM (build/wozmon.bin) = 3F00
+Symbol: YSAV (build/wozmon.bin) = 3F06

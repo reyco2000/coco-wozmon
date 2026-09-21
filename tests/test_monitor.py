@@ -73,8 +73,16 @@ def _dispatch(text, mode_in=0x00):
 
 
 def test_period_sets_block_mode():
-    sim = _dispatch("1000.1010")
+    """'.' sets MODE to $AE while the line is still being walked."""
+    sim = _dispatch("1000.")
     assert sim.peek(sim.sym["MODE"]) == 0xAE
+
+
+def test_completed_block_examine_returns_to_xam_mode():
+    """XAMNEXT clears MODE once the range is exhausted, as the original's
+    STX MODE (with X=0) does -- so MODE is $00 again after a full dump."""
+    sim = _dispatch("1000.1010")
+    assert sim.peek(sim.sym["MODE"]) == 0x00
 
 
 def test_colon_sets_store_mode():
@@ -120,3 +128,52 @@ def test_hex_letters_all_parse():
         sim = _dispatch(letter * 4)
         expected = int(letter * 4, 16)
         assert sim.peek_word(sim.sym["HEX"]) == expected, f"{letter} failed"
+
+
+# --- Task 8: examine and block examine ---------------------------------
+
+def _examine(text, pattern=None):
+    sim = CoCoSim()
+    if pattern:
+        for addr, val in pattern.items():
+            sim.poke(addr, val)
+    base = sim.sym["IN"]
+    for i, ch in enumerate(text + "\r"):
+        sim.poke(base + i, ord(ch))
+    sim.poke(sim.sym["MODE"], 0x00)
+    sim.run_sub("NEXTITEM", b=0, u=base)
+    return sim
+
+
+def test_single_examine_prints_address_and_byte():
+    sim = _examine("0500", {0x0500: 0xA9})
+    assert "0500: A9" in "".join(sim.screen_text())
+
+
+def test_block_examine_prints_eight_bytes_per_line():
+    pattern = {0x0500 + i: i for i in range(16)}
+    sim = _examine("0500.050F", pattern)
+    text = "".join(sim.screen_text())
+    assert "0500: 00 01 02 03 04 05 06 07" in text
+    assert "0508: 08 09 0A 0B 0C 0D 0E 0F" in text
+
+
+def test_dump_line_fits_32_columns():
+    pattern = {0x0500 + i: 0xFF for i in range(8)}
+    sim = _examine("0500.0507", pattern)
+    for row in sim.screen_text():
+        assert len(row.rstrip()) <= 32
+
+
+def test_block_examine_across_page_boundary():
+    """Exercises the INC XAM carry path the OCR listing got wrong."""
+    pattern = {0x04FE: 0xAA, 0x04FF: 0xBB, 0x0500: 0xCC, 0x0501: 0xDD}
+    sim = _examine("04FE.0501", pattern)
+    text = "".join(sim.screen_text())
+    assert "AA BB" in text
+    assert "CC DD" in text
+
+
+def test_examine_sets_xam_to_parsed_address():
+    sim = _examine("1234")
+    assert sim.peek_word(sim.sym["XAM"]) >= 0x1234

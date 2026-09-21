@@ -69,7 +69,7 @@ PUTCHK      ldx   <CURSOR
 PUTDONE     puls  a,b,x,pc
 
 ; --- SCROLL: move rows 1-15 up one, blank the last, home cursor there ---
-SCROLL      pshs  a,x,u
+SCROLL      pshs  a,b,x,u
             ldx   #SCREEN+32
             ldu   #SCREEN
 SCRLP       ldd   ,x++
@@ -83,7 +83,7 @@ SCRBLK      sta   ,x+
             blo   SCRBLK
             ldx   #SCREND-32
             stx   <CURSOR
-            puls  a,x,u,pc
+            puls  a,b,x,u,pc
 
 ; --- CLS: blank the screen and home the cursor ---
 CLS         pshs  a,x
@@ -260,9 +260,48 @@ NIESC       lda   #'\'
             rts
 NIDONE      rts
 
-; Stub, replaced in Task 8. It must close the dispatch loop rather than
-; return, or NEXTITEM stops after the first hex item and never reaches the
-; '.' or ':' that sets MODE.
-STOREOREXAM jmp   NEXTITEM
+; --- STOREOREXAM: MODE decides. Entered after PARSEHEX. ---
+; The 6809's BITA clears V rather than loading bit 6, so the original's
+; BIT/BVC/BMI dispatch becomes two explicit bit tests.
+STOREOREXAM lda   <MODE
+            bita  #$40
+            bne   DOSTORE            ; MODE $74: store
+            bita  #$80
+            bne   XAMNEXT            ; MODE $AE: block examine
+            ldx   <HEX               ; MODE $00: set both indices
+            stx   <ST
+            stx   <XAM
+            clra                     ; force Z=1: a new address must be printed
+NXTPRNT     bne   PRDATA             ; Z clear means mid-line, no address
+            lda   #CR
+            jsr   PUTCHAR
+            lda   <XAM
+            jsr   PRBYTE
+            lda   <XAM+1
+            jsr   PRBYTE
+            lda   #':'
+            jsr   PUTCHAR
+PRDATA      lda   #' '
+            jsr   PUTCHAR
+            ldx   <XAM
+            lda   ,x
+            jsr   PRBYTE
+XAMNEXT     clr   <MODE              ; back to XAM mode
+; The 16-bit compare must NOT use D: B holds the text index, and D is A:B,
+; so LDD <XAM would overwrite it with XAM's low byte. The 6502 original had
+; no such conflict -- its compare used A alone and the index lived in Y.
+; X is free here, so CMPX does the same job without touching B.
+            ldx   <XAM
+            cmpx  <HEX
+            bhs   TONEXTITEM         ; reached the end of the range
+            leax  1,x
+            stx   <XAM
+            lda   <XAM+1
+            anda  #$07               ; new line every 8 bytes
+            bra   NXTPRNT            ; BRA does not disturb Z
+TONEXTITEM  jmp   NEXTITEM
+
+; Stub, replaced in Task 9.
+DOSTORE     jmp   NEXTITEM
 
             end ENTRY
