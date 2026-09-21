@@ -88,14 +88,14 @@ EXEC
 
 Swap `WOZMONC` for the cursor version.
 
+`CLEAR 200,&H3EFF` moves BASIC's memory ceiling below the monitor's
+workspace. Without it, BASIC's string space sits on top of our variables and
+corrupts them. Remember there is no way back out — RESET is the exit.
+
 ### Building the disk yourself
 
 `make` writes the four images to `build/`; put the `.BIN` files on a disk
 with whatever tooling you normally use.
-
-`CLEAR 200,&H3EFF` moves BASIC's memory ceiling below the monitor's
-workspace. Without it, BASIC's string space sits on top of our variables and
-corrupts them. Remember there is no way back out — RESET is the exit.
 
 The `.ROM` files are 8K cartridge images. **These are untested on hardware** —
 see [Status](#status).
@@ -181,31 +181,6 @@ Three things make this work, and they apply to anything you write:
   `%`.
 
 There is a second, simpler example in [`examples/hello.asm`](examples/hello.asm).
-
-## Development
-
-The monitor is developed test-first against a host-side 6809 emulator that
-simulates the CoCo's PIA keyboard matrix and video RAM, so the whole thing
-can be exercised without hardware.
-
-```sh
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-make test                       # 95 tests
-```
-
-Tests assemble the real source with `lwasm`, execute it on a real 6809 core
-([MC6809](https://pypi.org/project/MC6809/)), and assert on memory and screen
-contents. The end-to-end tests drive `ENTRY` by feeding simulated keystrokes
-through the emulated PIA — the same path a person at the keyboard takes.
-
-```
-src/         the monitor, two versions
-examples/    sample programs, annotated
-tests/       harness.py simulates the CoCo; the rest are tests
-docs/        design spec and implementation plan
-WOZMON.DSK   ready-to-mount disk with both builds
-```
 
 ## Notes on porting 6502 to 6809
 
