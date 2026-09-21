@@ -301,7 +301,11 @@ XAMNEXT     clr   <MODE              ; back to XAM mode
             bra   NXTPRNT            ; BRA does not disturb Z
 TONEXTITEM  jmp   NEXTITEM
 
-; Stub, replaced in Task 9.
-DOSTORE     jmp   NEXTITEM
+; --- DOSTORE: write HEX's low byte at ST, then advance ST. ---
+DOSTORE     lda   <HEX+1
+            ldx   <ST
+            sta   ,x+
+            stx   <ST
+            jmp   NEXTITEM
 
             end ENTRY

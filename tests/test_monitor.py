@@ -177,3 +177,41 @@ def test_block_examine_across_page_boundary():
 def test_examine_sets_xam_to_parsed_address():
     sim = _examine("1234")
     assert sim.peek_word(sim.sym["XAM"]) >= 0x1234
+
+
+# --- Task 9: store mode ------------------------------------------------
+
+def test_store_writes_byte_at_address():
+    sim = _examine("0500: AA")
+    assert sim.peek(0x0500) == 0xAA
+
+
+def test_store_multiple_bytes_advances():
+    sim = _examine("0500: 11 22 33")
+    assert [sim.peek(0x0500 + i) for i in range(3)] == [0x11, 0x22, 0x33]
+
+
+def test_store_across_page_boundary():
+    sim = _examine("04FE: 11 22 33 44")
+    assert [sim.peek(0x04FE + i) for i in range(4)] == [0x11, 0x22, 0x33, 0x44]
+
+
+def test_store_uses_low_byte_only():
+    sim = _examine("0500: 1234")
+    assert sim.peek(0x0500) == 0x34
+
+
+def test_bare_colon_continues_from_last_store_index():
+    """ST persists across lines, so ':' with no address resumes storing."""
+    sim = CoCoSim()
+    base = sim.sym["IN"]
+
+    def feed(text):
+        for i, ch in enumerate(text + "\r"):
+            sim.poke(base + i, ord(ch))
+        sim.poke(sim.sym["MODE"], 0x00)
+        sim.run_sub("NEXTITEM", b=0, u=base)
+
+    feed("0500: 11 22")
+    feed(": 33 44")
+    assert [sim.peek(0x0500 + i) for i in range(4)] == [0x11, 0x22, 0x33, 0x44]
