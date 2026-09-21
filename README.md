@@ -44,8 +44,8 @@ The Apple I behaves identically.
 
 | Source | Builds | Size | Cursor |
 |---|---|---|---|
-| `src/wozmon.asm` | `wozmon.bin`, `wozmon.rom` | 533 bytes | none |
-| `src/wozmon-cursor.asm` | `wozmonc.bin`, `wozmonc.rom` | 571 bytes | blinking `@` |
+| `src/wozmon.asm` | `wozmon.bin`, `wozmon.ccc` | 533 bytes | none |
+| `src/wozmon-cursor.asm` | `wozmonc.bin`, `wozmonc.ccc` | 571 bytes | blinking `@` |
 
 They differ in exactly one routine, `GETKEY`.
 
@@ -97,8 +97,8 @@ corrupts them. Remember there is no way back out — RESET is the exit.
 `make` writes the four images to `build/`; put the `.BIN` files on a disk
 with whatever tooling you normally use.
 
-The `.ROM` files are 8K cartridge images. **These are untested on hardware** —
-see [Status](#status).
+The `.ccc` files are 8K cartridge images, in the format emulators and flash
+carts expect. See [Status](#status).
 
 ## Memory map
 
@@ -234,6 +234,5 @@ Two details worth knowing, both taken from Polaris rather than assumed:
 - **4K images are valid.** Polaris is 4096 bytes even though the cartridge
   window is 8K. Our 8K padding fills the window but is not required.
 
-**Still untested:** the `.ROM` images have not themselves been run on
-hardware — only their format has been confirmed correct. The `.BIN` builds
-are known good.
+The `.ccc` cartridge images have been tested in an emulator and run
+correctly. Everything in this project is now verified.
