@@ -96,4 +96,55 @@ CLSLP       sta   ,x+
             stx   <CURSOR
             puls  a,x,pc
 
+ESC         equ $1B
+BS          equ $08
+
+; --- SCANKEY: returns A = ASCII of a pressed key, or 0. Preserves B,X,U. ---
+; Walks the 8 columns by rotating a single low bit through B. After the
+; eighth column the low bit rotates out and carry clears, ending the loop.
+SCANKEY     pshs  b,x
+            ldx   #KEYTAB
+            ldb   #$FE
+SKCOL       stb   PIA0DB
+            lda   PIA0DA
+            coma                    ; active low -> active high
+            anda  #$7F              ; 7 valid rows
+            bne   SKHIT
+            leax  7,x               ; next column's 7 table entries
+            orcc  #$01              ; carry in = 1
+            rolb
+            bcs   SKCOL
+            clra                    ; walked all 8 columns, nothing down
+            puls  b,x,pc
+SKHIT       clrb                    ; find the lowest set row bit
+SKBIT       lsra
+            bcs   SKGOT
+            incb
+            bra   SKBIT
+SKGOT       abx                     ; X += B
+            lda   ,x
+            puls  b,x,pc
+
+; --- GETKEY: block until a key is pressed, then released. Returns A. ---
+GETKEY      pshs  b,x
+GKWAIT      bsr   SCANKEY
+            tsta
+            beq   GKWAIT
+            pshs  a
+GKREL       bsr   SCANKEY           ; debounce: wait for all keys up
+            tsta
+            bne   GKREL
+            puls  a
+            puls  b,x,pc
+
+; --- KEYTAB: column-major, 7 rows per column. 0 = unused position. ---
+KEYTAB      fcb   '@','H','P','X','0','8',CR      ; col 0
+            fcb   'A','I','Q','Y','1','9',0       ; col 1 (CLEAR unused)
+            fcb   'B','J','R','Z','2',':',ESC     ; col 2 (BREAK = ESC)
+            fcb   'C','K','S',0,'3',';',0         ; col 3
+            fcb   'D','L','T',0,'4',',',0         ; col 4
+            fcb   'E','M','U',BS,'5','-',0        ; col 5 (left = backspace)
+            fcb   'F','N','V',0,'6','.',0         ; col 6
+            fcb   'G','O','W',' ','7','/',0       ; col 7 (SHIFT unused)
+
             end ENTRY
