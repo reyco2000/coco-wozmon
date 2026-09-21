@@ -147,4 +147,20 @@ KEYTAB      fcb   '@','H','P','X','0','8',CR      ; col 0
             fcb   'F','N','V',0,'6','.',0         ; col 6
             fcb   'G','O','W',' ','7','/',0       ; col 7 (SHIFT unused)
 
+; --- PRBYTE: print A as two hex digits. Falls through to PRHEX. ---
+PRBYTE      pshs  a
+            lsra
+            lsra
+            lsra
+            lsra
+            bsr   PRHEX
+            puls  a
+; --- PRHEX: print A's low nibble as one hex digit. ---
+PRHEX       anda  #$0F
+            adda  #'0'
+            cmpa  #'9'
+            bls   PRHOUT
+            adda  #7                ; skip ':' through '@' to reach 'A'
+PRHOUT      jmp   PUTCHAR           ; tail call; PUTCHAR preserves A
+
             end ENTRY
