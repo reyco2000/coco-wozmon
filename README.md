@@ -69,15 +69,33 @@ make clean
 
 Both `.BIN` files load at `$4000` and need a **32K or 64K** machine.
 
+### The ready-made disk
+
+[`WOZMON.DSK`](WOZMON.DSK) is a standard 35-track single-sided Disk BASIC
+image with both builds already on it. Mount it in an emulator, or write it
+to a real disk or an SD/floppy emulator:
+
+```
+WOZMON .BIN     the plain monitor, faithful to the original
+WOZMONC.BIN     the same monitor with a blinking @ cursor
+```
+
 ```basic
 CLEAR 200,&H3EFF
 LOADM"WOZMON"
 EXEC
 ```
 
+Swap `WOZMONC` for the cursor version.
+
+### Building the disk yourself
+
+`make` writes the four images to `build/`; put the `.BIN` files on a disk
+with whatever tooling you normally use.
+
 `CLEAR 200,&H3EFF` moves BASIC's memory ceiling below the monitor's
 workspace. Without it, BASIC's string space sits on top of our variables and
-corrupts them.
+corrupts them. Remember there is no way back out — RESET is the exit.
 
 The `.ROM` files are 8K cartridge images. **These are untested on hardware** —
 see [Status](#status).
@@ -182,10 +200,11 @@ contents. The end-to-end tests drive `ENTRY` by feeding simulated keystrokes
 through the emulated PIA — the same path a person at the keyboard takes.
 
 ```
-src/        the monitor, two versions
-examples/   sample programs, annotated
-tests/      harness.py simulates the CoCo; the rest are tests
-docs/       design spec and implementation plan
+src/         the monitor, two versions
+examples/    sample programs, annotated
+tests/       harness.py simulates the CoCo; the rest are tests
+docs/        design spec and implementation plan
+WOZMON.DSK   ready-to-mount disk with both builds
 ```
 
 ## Notes on porting 6502 to 6809
